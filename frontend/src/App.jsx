@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import axios from 'axios'
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
+import { api } from './apiClient'
 
 function useAuth() {
   const [token, setToken] = useState(localStorage.getItem('token') || '')
@@ -25,8 +23,8 @@ function Login({ onLogin }) {
     setLoading(true)
     setError('')
     try {
-      const url = `${API_BASE}/api/auth/${mode}`
-      const { data } = await axios.post(url, { email, password })
+  const url = `/api/auth/${mode}`
+  const { data } = await api.post(url, { email, password })
       onLogin(data.token)
     } catch (e) {
       setError(e.response?.data?.error || e.message)
@@ -59,8 +57,8 @@ function Uploader({ token, onUploaded }) {
     try {
       const form = new FormData()
       form.append('file', file)
-      const { data } = await axios.post(`${API_BASE}/api/files/upload`, form, {
-        headers: { Authorization: `Bearer ${token}` }
+      const { data } = await api.post(`/api/files/upload`, form, {
+        headers: import.meta.env.VITE_MOCK_API === 'true' ? {} : { Authorization: `Bearer ${token}` }
       })
       onUploaded(data)
     } finally { setBusy(false) }
@@ -82,7 +80,7 @@ function Chat({ token }) {
 
   useEffect(() => {
     const load = async () => {
-      const { data } = await axios.get(`${API_BASE}/api/files`, { headers: { Authorization: `Bearer ${token}` } })
+  const { data } = await api.get(`/api/files`, { headers: import.meta.env.VITE_MOCK_API === 'true' ? {} : { Authorization: `Bearer ${token}` } })
       setDocs(data)
     }
     load()
@@ -92,7 +90,7 @@ function Chat({ token }) {
     setBusy(true)
     setAnswer('')
     try {
-      const { data } = await axios.post(`${API_BASE}/api/chat`, { question, documentIds: docs.slice(0, 3).map(d => d._id) }, { headers: { Authorization: `Bearer ${token}` } })
+  const { data } = await api.post(`/api/chat`, { question, documentIds: docs.slice(0, 3).map(d => d._id) }, { headers: import.meta.env.VITE_MOCK_API === 'true' ? {} : { Authorization: `Bearer ${token}` } })
       setAnswer(data.answer)
     } finally { setBusy(false) }
   }
