@@ -1,0 +1,159 @@
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/inter/700.css';
+@import '@fontsource/poppins/400.css';
+@import '@fontsource/poppins/500.css';
+@import '@fontsource/poppins/600.css';
+@import '@fontsource/poppins/700.css';
+@import '@fontsource/space-grotesk/400.css';
+@import '@fontsource/space-grotesk/500.css';
+@import '@fontsource/space-grotesk/600.css';
+@import '@fontsource/space-grotesk/700.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --transition: 160ms cubic-bezier(.4,0,.2,1);
+  --transition-slow: 300ms cubic-bezier(.4,0,.2,1);
+  --transition-bounce: 400ms cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+html { scroll-behavior: smooth; }
+
+body { 
+  @apply bg-gray-50 dark:bg-gray-950 text-gray-800 dark:text-gray-200 font-sans antialiased; 
+  transition: background-color var(--transition-slow), color var(--transition-slow);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { @apply bg-transparent; }
+::-webkit-scrollbar-thumb { @apply bg-gray-300 dark:bg-gray-700 rounded-full; }
+
+.btn { 
+  @apply inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-all select-none relative overflow-hidden;
+  transition: all var(--transition-slow), transform var(--transition);
+}
+.btn:hover { transform: translateY(-1px); }
+.btn:active { transform: translateY(0); }
+
+.btn-primary { 
+  @apply bg-brand-600 text-white hover:bg-brand-500 active:bg-brand-700 focus:ring-2 focus:ring-brand-400 focus:outline-none shadow-lg hover:shadow-xl;
+  box-shadow: 0 4px 14px 0 rgba(19, 153, 255, 0.39);
+  transition: all var(--transition-slow);
+}
+.btn-primary:hover { 
+  box-shadow: 0 6px 20px 0 rgba(19, 153, 255, 0.4);
+  transform: translateY(-2px);
+}
+
+.btn-outline { 
+  @apply border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 hover:border-brand-300 dark:hover:border-brand-600; 
+  transition: all var(--transition-slow);
+}
+
+.btn-danger { @apply bg-red-600 text-white hover:bg-red-500 shadow-lg hover:shadow-xl; }
+
+.input { 
+  @apply w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white/70 dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400; 
+  transition: all var(--transition-slow), box-shadow var(--transition);
+}
+.input:focus { 
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(19, 153, 255, 0.15);
+}
+
+.card { 
+  @apply rounded-xl bg-white dark:bg-gray-900/70 backdrop-blur shadow-soft border border-gray-200/70 dark:border-gray-800/60 p-6 relative overflow-hidden;
+  transition: all var(--transition-slow);
+}
+.card:hover { 
+  transform: translateY(-2px); 
+  box-shadow: 0 8px 25px -8px rgba(0,0,0,0.1), 0 12px 30px -8px rgba(0,0,0,0.1);
+}
+.card::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 20% 20%,rgba(255,255,255,0.4),transparent 60%); opacity: .4; pointer-events: none; }
+.badge { 
+  @apply inline-block rounded-full bg-brand-100 dark:bg-brand-800 text-brand-700 dark:text-brand-200 px-2 py-0.5 text-xs font-medium; 
+  transition: all var(--transition);
+  animation: badge-pulse 2s infinite;
+}
+
+.fade-in { animation: fadeIn .4s var(--transition); }
+@keyframes fadeIn { 
+  from { opacity: 0; transform: translateY(4px); } 
+  to { opacity: 1; transform: translateY(0); } 
+}
+
+@keyframes badge-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+/* Enhanced gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #1399ff 0%, #42b7ff 50%, #0076db 100%);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradient-shift 3s ease-in-out infinite;
+}
+
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* Glassmorphism enhancements */
+.glass-card {
+  backdrop-filter: blur(20px);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.dark .glass-card {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Modern loading animation */
+.loading-dots {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  animation: loading-bounce 1.4s infinite both;
+}
+
+.loading-dots::before,
+.loading-dots::after {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: loading-bounce 1.4s infinite both;
+}
+
+.loading-dots::before {
+  left: -30px;
+  animation-delay: -0.32s;
+}
+
+.loading-dots::after {
+  left: 30px;
+  animation-delay: 0.32s;
+}
+
+@keyframes loading-bounce {
+  0%, 80%, 100% {
+    transform: scale(0);
+  } 40% {
+    transform: scale(1);
+  }
+}
