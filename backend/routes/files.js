@@ -3,7 +3,7 @@ import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { authMiddleware } from '../middleware/auth.js';
-import { uploadFile, listFiles, getDocument } from '../controllers/fileController.js';
+import { uploadFile, listFiles, getDocument, deleteFile } from '../controllers/fileController.js';
 
 const router = Router();
 
@@ -26,5 +26,17 @@ router.use(authMiddleware);
 router.get('/', listFiles);
 router.get('/:id', getDocument);
 router.post('/upload', upload.single('file'), uploadFile);
+router.delete('/:id', deleteFile);
+
+// Test endpoint to debug upload issues
+router.post('/test-upload', (req, res) => {
+  console.log('🧪 Test upload endpoint hit:', {
+    hasBody: !!req.body,
+    hasFile: !!req.file,
+    headers: req.headers,
+    contentType: req.headers['content-type']
+  });
+  res.json({ message: 'Test endpoint reached', hasFile: !!req.file });
+});
 
 export default router;

@@ -22,6 +22,18 @@ const documentSchema = new mongoose.Schema(
     mimeType: String,
     size: Number,
     chunks: [chunkSchema],
+    metadata: {
+      pages: { type: Number, default: 1 },
+      wordCount: { type: Number, default: 0 },
+      language: { type: String, default: 'en' },
+      summary: { type: String, default: '' }
+    },
+    stats: {
+      views: { type: Number, default: 0 },
+      chats: { type: Number, default: 0 },
+      lastAccessed: { type: Date, default: Date.now }
+    },
+    isActive: { type: Boolean, default: true }
   },
   { timestamps: true }
 );

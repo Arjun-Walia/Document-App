@@ -13,8 +13,36 @@ import {
   Bot,
   User,
   Send,
-  Loader2
+  Loader2,
+  Trash2,
+  Eye,
+  History,
+  UserCircle,
+  BarChart3,
+  AlertCircle
 } from 'lucide-react'
+import DocumentViewer from './components/DocumentViewer'
+import Profile from './components/Profile'
+import ChatHistory from './components/ChatHistory'
+
+// Utility function to safely render any value
+function safeRender(value) {
+  try {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'object') {
+      if (React.isValidElement(value)) return value;
+      if (Array.isArray(value)) return value.map((item, i) => safeRender(item));
+      if (value.text) return String(value.text);
+      if (value.content) return String(value.content);
+      if (value.message) return String(value.message);
+      return JSON.stringify(value);
+    }
+    return String(value);
+  } catch (error) {
+    console.error('safeRender error:', error, 'value:', value);
+    return String(value);
+  }
+}
 
 // Theme hook
 function useTheme() {
@@ -297,18 +325,59 @@ function Uploader({ token, onUploaded }) {
   const [dragOver, setDragOver] = useState(false)
   const fileInputRef = useRef()
 
+  // Prevent uploads if not authenticated
+  if (!token) {
+    return (
+      <div className="text-center py-12 text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600">
+        <Upload className="w-16 h-16 mx-auto mb-4 opacity-50" />
+        <p className="text-lg font-medium mb-2">Authentication Required</p>
+        <p className="text-sm">Please log in to upload documents</p>
+      </div>
+    )
+  }
+
   const upload = async () => {
-    if (!file) return
+    if (!file) {
+      console.log('❌ No file selected')
+      return
+    }
     setBusy(true)
     try {
       const form = new FormData()
       form.append('file', file)
-      const { data } = await api.post(`/api/files/upload`, form, {
-        headers: import.meta.env.VITE_MOCK_API === 'true' ? {} : { Authorization: `Bearer ${token}` }
+      console.log('📤 Uploading file:', file.name, 'Size:', file.size, 'Type:', file.type)
+      console.log('📤 FormData contents:')
+      for (let [key, value] of form.entries()) {
+        console.log(`  ${key}:`, value)
+      }
+      
+      const response = await api.post(`/api/files/upload`, form, {
+        headers: {
+          ...(import.meta.env.VITE_MOCK_API !== 'true' ? { Authorization: `Bearer ${token}` } : {}),
+        }
       })
-      onUploaded(data)
+      
+      console.log('✅ Upload success:', response.data)
+      onUploaded(response.data)
       setFile(null)
       if (fileInputRef.current) fileInputRef.current.value = ''
+    } catch (error) {
+      console.error('❌ Upload error:', error)
+      // Handle specific error cases
+      if (error.response?.status === 400) {
+        const errorMsg = error.response.data.error || 'Upload failed: Bad request'
+        alert(errorMsg)
+        // If it's a limit error, refresh the document list
+        if (errorMsg.includes('limit')) {
+          window.location.reload()
+        }
+      } else if (error.response?.status === 401) {
+        alert('Please log in again to upload files')
+      } else if (error.response?.status === 413) {
+        alert('File too large. Please choose a smaller file.')
+      } else {
+        alert('Upload failed: ' + (error.response?.data?.error || error.message))
+      }
     } finally { 
       setBusy(false) 
     }
@@ -352,7 +421,7 @@ function Uploader({ token, onUploaded }) {
           </div>
           <div>
             <p className="font-medium text-gray-700 dark:text-gray-200">
-              {file ? file.name : 'Drop your file here'}
+              {file ? safeRender(file.name) : 'Drop your file here'}
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               {file ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : 'or click to browse'}
@@ -390,20 +459,120 @@ function Uploader({ token, onUploaded }) {
   )
 }
 
-function Chat({ token }) {
+function Chat({ token, lastUpload }) {
   const [docs, setDocs] = useState([])
   const [question, setQuestion] = useState('Summarize the latest upload.')
   const [answer, setAnswer] = useState('')
   const [busy, setBusy] = useState(false)
+  const [selectedDocument, setSelectedDocument] = useState(null)
+  const [selectedDocuments, setSelectedDocuments] = useState([])
+  const [isDocViewerOpen, setIsDocViewerOpen] = useState(false)
+  const [isProfileOpen, setIsProfileOpen] = useState(false)
+  const [isChatHistoryOpen, setIsChatHistoryOpen] = useState(false)
+  const [uploadLimit, setUploadLimit] = useState({ current: 0, max: 5 })
+  const [user, setUser] = useState(null)
   const chatRef = useRef()
 
   useEffect(() => {
     const load = async () => {
-      const { data } = await api.get(`/api/files`, { headers: import.meta.env.VITE_MOCK_API === 'true' ? {} : { Authorization: `Bearer ${token}` } })
-      setDocs(data)
+      try {
+        const response = await api.get(`/api/files`, { 
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        console.log('📄 Documents loaded:', response)
+        if (response.data.documents) {
+          setDocs(response.data.documents)
+          // Auto-select all documents initially for convenience
+          setSelectedDocuments(response.data.documents.map(doc => doc._id))
+          setUploadLimit({ 
+            current: response.data.total, 
+            max: response.data.limit, 
+            remaining: response.data.remaining 
+          })
+        } else {
+          setDocs(response.data)
+          // Auto-select all documents initially
+          setSelectedDocuments(response.data.map(doc => doc._id))
+        }
+      } catch (error) {
+        console.error('Error loading documents:', error)
+      }
     }
     load()
   }, [token])
+
+  // Reload documents when lastUpload changes
+  useEffect(() => {
+    if (lastUpload) {
+      const load = async () => {
+        try {
+          const response = await api.get(`/api/files`, { 
+            headers: { Authorization: `Bearer ${token}` }
+          })
+          if (response.data.documents) {
+            setDocs(response.data.documents)
+            // Update selected documents if new documents were added
+            setSelectedDocuments(prev => {
+              const newDocIds = response.data.documents.map(doc => doc._id)
+              const existingSelected = prev.filter(id => newDocIds.includes(id))
+              const newDocs = newDocIds.filter(id => !prev.includes(id))
+              return [...existingSelected, ...newDocs]
+            })
+            setUploadLimit({ 
+              current: response.data.total, 
+              max: response.data.limit, 
+              remaining: response.data.remaining 
+            })
+          } else {
+            setDocs(response.data)
+            setSelectedDocuments(response.data.map(doc => doc._id))
+          }
+        } catch (error) {
+          console.error('Error loading documents:', error)
+        }
+      }
+      load()
+    }
+  }, [lastUpload, token])
+
+  // Delete document function
+  const deleteDocument = async (docId) => {
+    try {
+      await api.delete(`/api/files/${docId}`, { 
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      setDocs(prev => prev.filter(doc => doc._id !== docId))
+      setUploadLimit(prev => ({ ...prev, current: prev.current - 1, remaining: prev.remaining + 1 }))
+    } catch (error) {
+      console.error('Error deleting document:', error)
+    }
+  }
+
+  // Open document viewer
+  const openDocumentViewer = (doc) => {
+    setSelectedDocument(doc)
+    setIsDocViewerOpen(true)
+  }
+
+  // Handle chat history selection
+  const handleChatHistorySelect = (chatData) => {
+    // Load the chat into the current interface
+    if (chatData.messages && chatData.messages.length > 0) {
+      const lastAssistantMessage = chatData.messages
+        .filter(msg => msg.role === 'assistant')
+        .pop()
+      if (lastAssistantMessage) {
+        setAnswer(safeRender(lastAssistantMessage.content));
+      }
+      // Optionally set the last user question
+      const lastUserMessage = chatData.messages
+        .filter(msg => msg.role === 'user')
+        .pop()
+      if (lastUserMessage) {
+        setQuestion(safeRender(lastUserMessage.content));
+      }
+    }
+  }
 
   useEffect(() => {
     if (chatRef.current && docs.length > 0) {
@@ -424,8 +593,50 @@ function Chat({ token }) {
     setBusy(true)
     setAnswer('')
     try {
-      const { data } = await api.post(`/api/chat`, { question, documentIds: docs.slice(0, 3).map(d => d._id) }, { headers: import.meta.env.VITE_MOCK_API === 'true' ? {} : { Authorization: `Bearer ${token}` } })
-      setAnswer(data.answer)
+      // Use selected documents or fall back to all documents if none selected
+      const documentsToUse = selectedDocuments.length > 0 
+        ? selectedDocuments 
+        : docs.slice(0, 3).map(d => d._id)
+      
+      if (documentsToUse.length === 0) {
+        setAnswer('Please select at least one document to chat with.')
+        setBusy(false)
+        return
+      }
+
+      const response = await api.post(`/api/chat`, { 
+        question, 
+        documentIds: documentsToUse 
+      }, { 
+        headers: import.meta.env.VITE_MOCK_API === 'true' ? {} : { Authorization: `Bearer ${token}` } 
+      })
+      
+      console.log('🔍 Full API response:', response.data) // Debug log
+      
+      // Handle different response formats
+      const responseData = response.data.data?.answer || response.data.answer || response.data;
+      setAnswer(safeRender(responseData));
+    } catch (error) {
+      console.error('❌ Chat error:', error)
+      
+      // Handle specific error types from the backend
+      if (error.response?.status === 503) {
+        const errorData = error.response.data;
+        if (errorData.code === 'SERVICE_OVERLOADED') {
+          setAnswer(`⚠️ The AI service is currently experiencing high demand. This is normal during peak hours.\n\n🔄 Please try again in a few moments. The system will automatically retry failed requests.\n\n💡 Tip: You can try asking a simpler question or selecting fewer documents to reduce processing time.`);
+        } else {
+          setAnswer('⚠️ The AI service is temporarily unavailable. Please try again in a few moments.');
+        }
+      } else if (error.response?.status === 429) {
+        const errorData = error.response.data;
+        if (errorData.code === 'QUOTA_EXCEEDED') {
+          setAnswer('⚠️ Daily AI usage limit reached. Please try again tomorrow or contact support for increased limits.');
+        } else {
+          setAnswer('⚠️ Rate limit exceeded. Please wait a moment before trying again.');
+        }
+      } else {
+        setAnswer('Error: ' + (error.response?.data?.error || error.message));
+      }
     } finally { setBusy(false) }
   }
 
@@ -448,31 +659,83 @@ function Chat({ token }) {
             animate={{ scale: docs.length > 0 ? [1, 1.1, 1] : 1 }}
             transition={{ duration: 0.3 }}
           >
-            {docs.length}
+            {safeRender(docs.length)}
           </motion.span>
         </motion.div>
         
         <div className="grid gap-3">
+          {/* Upload Limit Indicator */}
+          {uploadLimit.max > 0 && (
+            <motion.div 
+              className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl border border-blue-200 dark:border-blue-700 mb-4"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <div className="flex items-center space-x-2">
+                <BarChart3 className="w-4 h-4 text-blue-600" />
+                <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                  Storage: {safeRender(uploadLimit.current)}/{safeRender(uploadLimit.max)} documents
+                </span>
+                {uploadLimit.remaining <= 1 && (
+                  <div className="flex items-center space-x-1 text-orange-600">
+                    <AlertCircle className="w-3 h-3" />
+                    <span className="text-xs">Almost full!</span>
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center space-x-1">
+                <button
+                  onClick={() => setIsChatHistoryOpen(true)}
+                  className="p-1.5 hover:bg-blue-200 dark:hover:bg-blue-800/50 rounded-lg transition-colors"
+                  title="View Chat History"
+                >
+                  <History className="w-3 h-3 text-blue-600" />
+                </button>
+              </div>
+            </motion.div>
+          )}
+
           {docs.length > 0 ? (
             docs.map((d, index) => (
               <motion.div
                 key={d._id}
-                className="doc-item flex items-center gap-3 p-3 rounded-lg bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-700 border border-gray-200 dark:border-gray-600"
-                whileHover={{ x: 4, boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}
+                className="doc-item group flex items-center gap-3 p-4 rounded-xl bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-700 border border-gray-200 dark:border-gray-600 hover:shadow-lg transition-all duration-200"
+                whileHover={{ y: -2, boxShadow: "0 8px 25px rgba(0,0,0,0.1)" }}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}
               >
-                <div className="w-8 h-8 bg-brand-100 dark:bg-brand-800 rounded-lg flex items-center justify-center">
-                  <FileText className="w-4 h-4 text-brand-600 dark:text-brand-400" />
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-800 dark:to-purple-800 rounded-xl flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">
-                    {d.originalName}
+                  <p className="font-semibold text-gray-900 dark:text-gray-100 truncate">
+                    {safeRender(d.originalName)}
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {d.chunks} chunks processed
-                  </p>
+                </div>
+                <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      openDocumentViewer(d)
+                    }}
+                    className="p-2 text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-800/50 rounded-lg transition-colors"
+                    title="View Document"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (confirm(`Are you sure you want to delete "${safeRender(d.originalName)}"`)) {
+                        deleteDocument(d._id)
+                      }
+                    }}
+                    className="p-2 text-red-600 hover:bg-red-100 dark:hover:bg-red-800/50 rounded-lg transition-colors"
+                    title="Delete Document"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               </motion.div>
             ))
@@ -492,6 +755,70 @@ function Chat({ token }) {
         </div>
 
         <div className="space-y-4">
+          {/* Document Selection for Chat */}
+          {docs.length > 1 && (
+            <motion.div 
+              className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-700"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <h4 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-3 flex items-center">
+                <MessageCircle className="w-4 h-4 mr-2" />
+                Select documents to chat with:
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {docs.map((doc, index) => (
+                  <motion.label
+                    key={doc._id}
+                    className="flex items-center space-x-2 p-2 rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors"
+                    whileHover={{ scale: 1.02 }}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedDocuments.includes(doc._id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedDocuments(prev => [...prev, doc._id])
+                        } else {
+                          setSelectedDocuments(prev => prev.filter(id => id !== doc._id))
+                        }
+                      }}
+                      className="rounded border-blue-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <div className="flex items-center space-x-2 min-w-0 flex-1">
+                      <FileText className="w-3 h-3 text-blue-600 flex-shrink-0" />
+                      <span className="text-xs text-blue-700 dark:text-blue-300 truncate">
+                        {safeRender(doc.originalName)}
+                      </span>
+                    </div>
+                  </motion.label>
+                ))}
+              </div>
+              <div className="flex justify-between items-center mt-3 pt-3 border-t border-blue-200 dark:border-blue-700">
+                <span className="text-xs text-blue-600 dark:text-blue-400">
+                  {selectedDocuments.length} of {docs.length} documents selected
+                </span>
+                <div className="space-x-2">
+                  <button
+                    onClick={() => setSelectedDocuments([])}
+                    className="text-xs px-2 py-1 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
+                  >
+                    Clear all
+                  </button>
+                  <button
+                    onClick={() => setSelectedDocuments(docs.map(d => d._id))}
+                    className="text-xs px-2 py-1 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
+                  >
+                    Select all
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+          
           <div className="relative">
             <motion.textarea 
               rows={4} 
@@ -560,12 +887,31 @@ function Chat({ token }) {
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.2, duration: 0.6 }}
               >
-                {answer}
+                {safeRender(answer)}
               </motion.pre>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
+
+      {/* Modal Components */}
+      <DocumentViewer 
+        document={selectedDocument} 
+        isOpen={isDocViewerOpen} 
+        onClose={() => setIsDocViewerOpen(false)} 
+      />
+      
+      <Profile 
+        isOpen={isProfileOpen} 
+        onClose={() => setIsProfileOpen(false)} 
+        user={user} 
+      />
+      
+      <ChatHistory 
+        isOpen={isChatHistoryOpen} 
+        onClose={() => setIsChatHistoryOpen(false)} 
+        onSelectChat={handleChatHistorySelect} 
+      />
     </GlassCard>
   )
 }
@@ -574,6 +920,7 @@ export default function App() {
   const auth = useAuth()
   const theme = useTheme()
   const [lastUpload, setLastUpload] = useState(null)
+  const [showProfile, setShowProfile] = useState(false)
   const appRef = useRef()
 
   useEffect(() => {
@@ -677,17 +1024,18 @@ export default function App() {
             </div>
           </motion.div>
           
-          {/* Theme toggle moved to top right */}
           <div className="flex items-center gap-4">
             <ThemeToggle theme={theme.theme} onToggle={theme.toggle} />
-            <motion.button 
-              onClick={() => auth.setToken('')} 
-              className="btn btn-outline h-10 px-4 font-medium"
+            <motion.button
+              onClick={() => setShowProfile(true)}
+              className="flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
-              <LogOut className="w-4 h-4 mr-2" />
-              <span className="hidden sm:inline">Sign Out</span>
+              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                <User className="w-4 h-4" />
+              </div>
+              <span className="font-medium">Profile</span>
             </motion.button>
           </div>
         </div>
@@ -725,7 +1073,7 @@ export default function App() {
                         Successfully processed!
                       </p>
                       <p className="text-xs text-green-600 dark:text-green-400">
-                        {lastUpload.filename} • {lastUpload.chunks} chunks
+                        {safeRender(lastUpload.filename)} • {safeRender(lastUpload.chunks)} chunks
                       </p>
                     </div>
                   </div>
@@ -741,7 +1089,7 @@ export default function App() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
         >
-          <Chat token={auth.token} />
+          <Chat token={auth.token} lastUpload={lastUpload} />
         </motion.div>
       </main>
       
@@ -754,11 +1102,26 @@ export default function App() {
         <div className="flex items-center justify-center gap-6 text-sm text-gray-500 dark:text-gray-400">
           <span>Built with ❤️ using React + Vite</span>
           <span>•</span>
-          <span>Powered by Ollama AI</span>
+          <span>Powered by Google Gemini AI</span>
           <span>•</span>
-          <span>100% Local & Private</span>
+          <span>Secure & Private</span>
         </div>
       </motion.footer>
+
+      {/* Profile Modal */}
+      <AnimatePresence>
+        {showProfile && (
+          <Profile 
+            isOpen={showProfile}
+            onClose={() => setShowProfile(false)}
+            onLogout={() => {
+              auth.setToken('')
+              setShowProfile(false)
+            }}
+            token={auth.token}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }

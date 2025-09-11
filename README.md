@@ -9,7 +9,7 @@
 [![Vite](https://img.shields.io/badge/Vite-Build%20Tool-646CFF?style=flat-square&logo=vite&logoColor=white)](https://vitejs.dev/)
 [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-Styling-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
 [![MongoDB](https://img.shields.io/badge/MongoDB-Database-47A248?style=flat-square&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
-[![Ollama](https://img.shields.io/badge/Ollama-AI%20Engine-FF6B6B?style=flat-square&logo=ai&logoColor=white)](https://ollama.ai/)
+[![Google Gemini](https://img.shields.io/badge/Google%20Gemini-AI%20Engine-4285F4?style=flat-square&logo=google&logoColor=white)](https://ai.google.com/)
 
 *Transform your documents into intelligent conversations with AI-powered analysis and insights.*
 
@@ -27,7 +27,7 @@
 
 - **🤖 AI-Powered Chat** - Natural language conversations with your documents
 - **📄 Multi-Format Support** - PDF, DOC, DOCX, TXT file processing
-- **🔒 Privacy First** - 100% local processing with Ollama
+- **🔒 Privacy First** - Secure processing with Google Gemini AI
 - **🌙 Dark Mode** - Beautiful light/dark theme switching
 - **✨ Modern UI** - Glassmorphism design with smooth animations
 - **📱 Responsive** - Works perfectly on all devices
@@ -46,8 +46,8 @@ graph TB
     B --> E[Document Processing - PDF.js]
     E --> F[Text Chunking Service]
     F --> G[MongoDB - Document Storage]
-    B --> H[AI Chat - Ollama Integration]
-    H --> I[Local AI Models]
+    B --> H[AI Chat - Google Gemini]
+    H --> I[Gemini AI Models]
     
     style A fill:#61DAFB,stroke:#333,stroke-width:2px
     style B fill:#339933,stroke:#333,stroke-width:2px
@@ -63,7 +63,7 @@ graph TB
 
 - **Node.js** (v18+ recommended)
 - **MongoDB** (local or cloud instance)
-- **Ollama** (for local AI processing)
+- **Google Gemini API Key** (for AI processing)
 
 ### 1. Clone the Repository
 
@@ -95,19 +95,19 @@ PORT=5000
 NODE_ENV=development
 
 # Database
-MONGODB_URI=mongodb://localhost:27017/document-app
+MONGODB_URI=mongodb://127.0.0.1:27017/document_app
 
 # Authentication
-JWT_SECRET=your_super_secret_jwt_key_here
+JWT_SECRET=your_super_secret_jwt_key_change_this_in_production
 JWT_EXPIRES_IN=7d
 
-# Ollama Configuration
-OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL=llama2
+# Gemini AI Configuration
+# Get your API key from: https://aistudio.google.com/app/apikey
+GEMINI_API_KEY=your_gemini_api_key_here
 
 # File Upload
 MAX_FILE_SIZE=10485760
-UPLOAD_DIR=./uploads
+UPLOAD_DIR=uploads
 ALLOWED_EXTENSIONS=pdf,doc,docx,txt
 ```
 
@@ -122,32 +122,58 @@ VITE_APP_NAME=DocumentAI
 VITE_APP_VERSION=1.0.0
 ```
 
-### 4. Setup Ollama
+> **🔐 Security Note:** Never commit your `.env` files to version control. Use `.env.example` as a template and keep your actual API keys secure.
 
-```bash
-# Install Ollama (macOS/Linux)
-curl -fsSL https://ollama.ai/install.sh | sh
+### 4. Get Your Gemini API Key
 
-# Or download from https://ollama.ai for Windows
-
-# Pull a model
-ollama pull llama2
-```
+1. Visit [Google AI Studio](https://aistudio.google.com/app/apikey)
+2. Sign in with your Google account
+3. Click "Create API Key"
+4. Copy the generated key to your `.env` file
 
 ### 5. Start the Application
 
+**🎯 Easy Startup (Recommended)**
+
 ```bash
-# Terminal 1: Start MongoDB
+# Install all dependencies at once
+npm run install:all
+
+# Start both servers with one command
+npm run dev
+```
+
+**💻 Windows Users (Alternative Methods)**
+
+```batch
+# Using batch file - opens separate windows
+start-dev.bat
+```
+
+```powershell
+# Using PowerShell script - opens separate windows
+.\start-dev.ps1
+```
+
+**🔧 Manual Startup (Original Method)**
+
+```bash
+# Terminal 1: Start MongoDB (if not running)
 mongod
 
 # Terminal 2: Start backend server
 cd backend
-npm run dev
+npm start
 
 # Terminal 3: Start frontend
 cd frontend
 npm run dev
 ```
+
+The application will be available at:
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:5000
+- **API Health Check**: http://localhost:5000/api/health
 
 Visit `http://localhost:3000` to see the application in action! 🎉
 
@@ -174,7 +200,7 @@ Document-App/
 │   │   ├── chat.js           # Chat routes
 │   │   └── files.js          # File handling routes
 │   ├── 📁 services/          # External service integrations
-│   │   ├── ollama.js         # Ollama AI service
+│   │   ├── gemini.js         # Google Gemini AI service
 │   │   └── pdf.js            # PDF processing
 │   ├── 📁 uploads/           # File storage directory
 │   ├── package.json          # Backend dependencies
@@ -318,8 +344,8 @@ Send a question about uploaded documents to AI.
 - **PDF-Parse** - PDF text extraction
 
 **AI Integration:**
-- **Ollama** - Local AI model serving
-- **LLaMA 2** - Large language model
+- **Google Gemini** - Advanced AI language model
+- **Gemini API** - Cloud-based AI processing
 
 ### Available Scripts
 
@@ -416,7 +442,7 @@ npm install --production
 NODE_ENV=production
 MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/document-app
 JWT_SECRET=your_production_jwt_secret_very_long_and_secure
-OLLAMA_BASE_URL=https://your-ollama-instance.com
+GEMINI_API_KEY=your_production_gemini_api_key
 ```
 
 ### Deployment Options
@@ -457,7 +483,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 ## 🙏 Acknowledgments
 
 - **OpenAI** for inspiring AI-powered document analysis
-- **Ollama** for providing local AI model serving
+- **Google** for providing the powerful Gemini AI platform
 - **React** and **Node.js** communities for excellent tools
 - **TailwindCSS** for the utility-first CSS approach
 - **MongoDB** for flexible document storage
