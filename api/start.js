@@ -7,7 +7,7 @@ dotenv.config();
 // Verify critical environment variables
 if (!process.env.GEMINI_API_KEY) {
     console.warn('⚠️  GEMINI_API_KEY not set. AI features will return degradation errors until you configure it.');
-    console.warn('📝  Add GEMINI_API_KEY=your_key to backend/.env for full functionality.');
+    console.warn('📝  Add GEMINI_API_KEY=your_key to api/.env for full functionality.');
     // Continue startup (degraded mode)
 }
 

@@ -8,7 +8,7 @@ Write-Host "Press Ctrl+C in each terminal to stop the servers" -ForegroundColor 
 Write-Host ""
 
 # Start backend in new terminal
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd 'C:\1Coding_stuff\Document-App\backend'; npm start"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd 'C:\1Coding_stuff\Document-App\api'; npm start"
 
 # Wait 3 seconds
 Start-Sleep -Seconds 3
