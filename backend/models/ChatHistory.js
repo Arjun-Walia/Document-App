@@ -30,6 +30,9 @@ const chatHistorySchema = new mongoose.Schema({
     tokens: {
       type: Number,
       default: 0
+    },
+    model: {
+      type: String
     }
   }],
   title: {

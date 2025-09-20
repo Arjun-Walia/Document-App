@@ -66,10 +66,12 @@ const ChatHistory = ({ isOpen, onClose, onSelectChat }) => {
 
     // Search filter
     if (searchTerm) {
-      filtered = filtered.filter(chat => 
-        chat.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        chat.documentId?.originalName?.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+      const q = searchTerm.toLowerCase();
+      filtered = filtered.filter(chat => {
+        const title = typeof chat.title === 'string' ? chat.title.toLowerCase() : '';
+        const docName = typeof chat.documentId?.originalName === 'string' ? chat.documentId.originalName.toLowerCase() : '';
+        return title.includes(q) || docName.includes(q);
+      });
     }
 
     // Time filter

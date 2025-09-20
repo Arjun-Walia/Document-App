@@ -23,6 +23,8 @@
 
 **DocumentAI** is a cutting-edge document analysis platform that leverages local AI processing to provide intelligent insights from your documents. Upload any document and engage in natural conversations to extract knowledge, summaries, and answers instantly.
 
+> Update (Maintenance Pass): Minor bug fixes applied including safer file upload validation, improved chat history metadata (tokens/model), duplicate analytics route removal, schema soft-delete support, environment variable safety warnings, and security improvement by hiding API key fragments in production logs.
+
 ### 🎯 Key Features
 
 - **🤖 AI-Powered Chat** - Natural language conversations with your documents
@@ -142,6 +144,8 @@ npm run install:all
 # Start both servers with one command
 npm run dev
 ```
+
+This root `npm run dev` uses `concurrently` to launch backend and frontend together. Make sure MongoDB is running (or Atlas URI set) and optionally set `GEMINI_API_KEY`; without the key AI endpoints will respond with a degradation notice but the rest of the app (uploads, profile, history) will function.
 
 **💻 Windows Users (Alternative Methods)**
 
@@ -492,7 +496,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 ## 📞 Support
 
-- 📧 **Email:** arjun.walia.dev@gmail.com
+- 📧 **Email:** arjunwalia957@gmail.com
 - 🐛 **Issues:** [GitHub Issues](https://github.com/Arjun-Walia/Document-App/issues)
 - 💬 **Discussions:** [GitHub Discussions](https://github.com/Arjun-Walia/Document-App/discussions)
 

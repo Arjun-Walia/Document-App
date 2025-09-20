@@ -11,8 +11,9 @@ let circuitBreaker = {
   resetTimeout: 60000 // 1 minute
 };
 
-console.log('🔍 Gemini module loaded - API_KEY available:', !!API_KEY);
-console.log('🔍 API_KEY value:', API_KEY ? `${API_KEY.substring(0, 20)}...` : 'undefined');
+if (process.env.NODE_ENV !== 'production') {
+  console.log('🔍 Gemini module loaded - API_KEY available:', !!API_KEY);
+}
 
 let genAI;
 let model;
@@ -21,8 +22,9 @@ let model;
 function initializeGemini() {
   try {
     const currentApiKey = process.env.GEMINI_API_KEY;
-    console.log('🔍 Initialize - API_KEY available:', !!currentApiKey);
-    console.log('🔍 Initialize - API_KEY value:', currentApiKey ? `${currentApiKey.substring(0, 20)}...` : 'undefined');
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🔍 Initialize - API_KEY available:', !!currentApiKey);
+    }
     
     if (!currentApiKey) {
       throw new Error('GEMINI_API_KEY environment variable is not set');

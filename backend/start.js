@@ -6,9 +6,13 @@ dotenv.config();
 
 // Verify critical environment variables
 if (!process.env.GEMINI_API_KEY) {
-    console.error('❌ GEMINI_API_KEY environment variable is required. Please set it in your .env file.');
-    console.error('📝 Create a .env file in the backend directory and add: GEMINI_API_KEY=your_api_key_here');
-    process.exit(1);
+    console.warn('⚠️  GEMINI_API_KEY not set. AI features will return degradation errors until you configure it.');
+    console.warn('📝  Add GEMINI_API_KEY=your_key to backend/.env for full functionality.');
+    // Continue startup (degraded mode)
+}
+
+if (!process.env.JWT_SECRET) {
+    console.warn('⚠️ JWT_SECRET not set. Falling back to insecure default. Set JWT_SECRET in production!');
 }
 
 // Now import and start the server

@@ -162,7 +162,7 @@ export const chat = async (req, res) => {
         const chatHistory = new ChatHistory({
           userId: req.user.id,
           documentId: docs[0]._id, // Primary document
-          title: question.length > 50 ? question.substring(0, 50) + '...' : question,
+          title: (question || type).length > 50 ? (question || type).substring(0, 50) + '...' : (question || type),
           messages: [
             {
               role: 'user',
@@ -174,11 +174,11 @@ export const chat = async (req, res) => {
               content: result.response,
               timestamp: new Date(),
               model: result.model,
-              tokensUsed: result.tokensUsed
+              tokens: result.tokensUsed || 0
             }
           ],
           totalTokens: result.tokensUsed || 0,
-          summary: type === 'summary' ? result.response.substring(0, 200) : question.substring(0, 200),
+          summary: type === 'summary' ? result.response.substring(0, 200) : (question || '').substring(0, 200),
           isActive: true
         });
         

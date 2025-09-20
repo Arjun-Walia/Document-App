@@ -33,7 +33,8 @@ const documentSchema = new mongoose.Schema(
       chats: { type: Number, default: 0 },
       lastAccessed: { type: Date, default: Date.now }
     },
-    isActive: { type: Boolean, default: true }
+  isActive: { type: Boolean, default: true },
+  deletedAt: { type: Date, default: null }
   },
   { timestamps: true }
 );

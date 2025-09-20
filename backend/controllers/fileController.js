@@ -9,13 +9,29 @@ import { extractPdfText } from '../services/pdf.js';
 const CHUNK_SIZE = 1200; // characters
 const MAX_DOCUMENTS_PER_USER = 5;
 
-function chunkText(text) {
+function chunkText(text, filename = 'unknown') {
   const chunks = [];
   let i = 0;
+  let page = 1;
+  const wordsPerPage = 300; // Rough estimate
+  
   while (i < text.length) {
     const end = Math.min(i + CHUNK_SIZE, text.length);
     const slice = text.slice(i, end);
-    chunks.push({ text: slice, source: { start: i, end } });
+    
+    // Calculate approximate page number
+    const wordCountSoFar = Math.floor(i / 5); // Rough word count estimate
+    const currentPage = Math.floor(wordCountSoFar / wordsPerPage) + 1;
+    
+    chunks.push({ 
+      text: slice, 
+      source: { 
+        filename: filename,
+        page: currentPage,
+        start: i, 
+        end: end 
+      } 
+    });
     i = end;
   }
   return chunks;
@@ -56,6 +72,22 @@ export const uploadFile = async (req, res) => {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
+    // Basic validation for allowed mime types
+    const allowedMime = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain'
+    ];
+    if (!allowedMime.includes(file.mimetype)) {
+      return res.status(400).json({ error: 'Unsupported file type' });
+    }
+
+    // Basic size ceiling (10MB) even if multer is configured, as safeguard
+    if (file.size > (10 * 1024 * 1024)) {
+      return res.status(413).json({ error: 'File too large (max 10MB)' });
+    }
+
     // Check document limit for user
     const userId = req.user?.id;
     let documentCount = 0;
@@ -75,10 +107,10 @@ export const uploadFile = async (req, res) => {
     }
 
     const text = await extractText(file.path, file.mimetype);
-    const chunks = chunkText(text);
+    const chunks = chunkText(text, file.originalname);
     
     // Calculate metadata
-    const wordCount = text.split(/\s+/).length;
+  const wordCount = text ? text.split(/\s+/).length : 0;
     const pages = file.mimetype === 'application/pdf' ? 
       Math.ceil(text.length / 3000) : // Rough estimate for PDF pages
       Math.ceil(text.length / 2500); // Rough estimate for other docs
@@ -89,7 +121,7 @@ export const uploadFile = async (req, res) => {
       originalName: file.originalname,
       mimeType: file.mimetype,
       size: file.size,
-      chunks,
+      chunks: chunks || [],
       metadata: {
         pages,
         wordCount,
