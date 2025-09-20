@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "AI-powered document chat application",
   "scripts": {
+    "start": "node api/server.js",
     "dev": "concurrently \"npm run dev:api\" \"npm run dev:frontend\"",
     "dev:api": "cd api && npm start",
     "dev:frontend": "cd frontend && npm run dev",
