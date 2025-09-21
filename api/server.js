@@ -36,6 +36,13 @@ app.use(morgan('dev'));
 // Static uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Serve frontend static files in production
+if (process.env.NODE_ENV === 'production') {
+  const frontendPath = path.join(__dirname, '..', 'frontend', 'dist');
+  console.log('🔧 Serving frontend from:', frontendPath);
+  app.use(express.static(frontendPath));
+}
+
 console.log('🔧 Setting up routes...');
 
 // Health check endpoints
@@ -82,7 +89,7 @@ app.use('/api/chat-history', chatHistoryRoutes);
 app.use('/api/profile', profileRoutes);
 
 // Health check endpoint
-app.get('/', (_req, res) => {
+app.get('/api', (_req, res) => {
   res.json({ 
     status: 'ok', 
     name: 'DocumentAI Backend',
@@ -92,6 +99,27 @@ app.get('/', (_req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+
+// Serve frontend for all other routes in production
+if (process.env.NODE_ENV === 'production') {
+  app.get('*', (req, res) => {
+    const frontendPath = path.join(__dirname, '..', 'frontend', 'dist', 'index.html');
+    res.sendFile(frontendPath);
+  });
+} else {
+  // Development: serve API info on root
+  app.get('/', (_req, res) => {
+    res.json({ 
+      status: 'ok', 
+      name: 'DocumentAI Backend',
+      version: '1.0.0',
+      aiProvider: 'Google Gemini',
+      model: 'gemini-1.5-flash',
+      timestamp: new Date().toISOString(),
+      note: 'Frontend served separately in development'
+    });
+  });
+}
 
 // Global error handler
 app.use((error, req, res, next) => {
@@ -103,14 +131,27 @@ app.use((error, req, res, next) => {
   });
 });
 
-// Handle 404s
-app.use('*', (req, res) => {
+// Handle 404s for API routes only
+app.use('/api/*', (req, res) => {
   res.status(404).json({
-    error: 'Route not found',
+    error: 'API route not found',
     success: false,
     path: req.originalUrl
   });
 });
+
+// Catch-all for non-API routes in production (serve frontend)
+if (process.env.NODE_ENV === 'production') {
+  app.get('*', (req, res) => {
+    const frontendPath = path.join(__dirname, '..', 'frontend', 'dist', 'index.html');
+    res.sendFile(frontendPath, (err) => {
+      if (err) {
+        console.error('Error serving frontend:', err);
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    });
+  });
+}
 
 const PORT = process.env.PORT || 5000;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/document_app';

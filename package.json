@@ -3,17 +3,16 @@
   "version": "1.0.0",
   "description": "AI-powered document chat application",
   "scripts": {
-    "start": "concurrently \"npm run start:api\" \"npm run start:frontend\"",
+    "start": "npm run build && cross-env NODE_ENV=production node api/start.js",
     "dev": "concurrently \"npm run dev:api\" \"npm run dev:frontend\"",
-    "start:api": "cd api && npm start",
-    "start:frontend": "cd frontend && npm run preview",
     "dev:api": "cd api && npm start",
     "dev:frontend": "cd frontend && npm run dev",
     "build": "cd frontend && npm run build",
     "install:all": "npm install && cd api && npm install && cd ../frontend && npm install"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "cross-env": "^10.0.0"
   },
   "keywords": [
     "ai",
