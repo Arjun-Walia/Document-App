@@ -1,8 +1,13 @@
 // Bootstrap module to ensure environment variables are loaded before any imports
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-// Load environment variables first
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load environment variables from the api directory
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 // Verify critical environment variables
 if (!process.env.GEMINI_API_KEY) {
