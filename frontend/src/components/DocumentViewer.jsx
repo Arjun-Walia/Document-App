@@ -165,11 +165,31 @@ const DocumentViewer = ({ document, isOpen, onClose }) => {
                   {isPDF ? (
                     /* PDF Viewer */
                     <div className="flex-1 relative bg-gray-100 dark:bg-gray-800">
-                      <iframe
-                        src={`/uploads/${document.filename}`}
+                      <object
+                        data={`/uploads/${document.filename}`}
+                        type="application/pdf"
                         className="w-full h-full border-0"
                         title={document.originalName}
-                      />
+                      >
+                        <embed
+                          src={`/uploads/${document.filename}`}
+                          type="application/pdf"
+                          className="w-full h-full border-0"
+                          title={document.originalName}
+                        />
+                        <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+                          <FileText className="w-16 h-16 text-gray-400 mb-4" />
+                          <p className="text-gray-600 dark:text-gray-400 mb-4">
+                            Unable to display PDF in browser.
+                          </p>
+                          <button
+                            onClick={handleDownload}
+                            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                          >
+                            Download PDF
+                          </button>
+                        </div>
+                      </object>
                       {/* Simple Page Info */}
                       {totalPages > 1 && (
                         <div className="absolute top-4 right-4 bg-black/70 text-white px-3 py-1 rounded text-sm">
