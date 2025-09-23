@@ -5,23 +5,29 @@ import {
   FileText,
   Calendar,
   Eye,
-  Download
+  Download,
+  ArrowLeft
 } from 'lucide-react'
 
-const DocumentViewer = ({ document, isOpen, onClose }) => {
+const DocumentViewer = ({ document: doc, isOpen, onClose }) => {
   const [isLoading, setIsLoading] = useState(false)
   const [documentContent, setDocumentContent] = useState(null)
+  const [showCloseHint, setShowCloseHint] = useState(false)
 
   useEffect(() => {
-    if (isOpen && document) {
+    if (isOpen && doc) {
       fetchDocumentContent()
+      // Show close hint for 3 seconds when viewer opens
+      setShowCloseHint(true)
+      const timer = setTimeout(() => setShowCloseHint(false), 3000)
+      return () => clearTimeout(timer)
     }
-  }, [isOpen, document])
+  }, [isOpen, doc])
 
   const fetchDocumentContent = async () => {
     setIsLoading(true)
     try {
-      const response = await fetch(`/api/files/${document._id}`, {
+      const response = await fetch(`/api/files/${doc._id}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -32,15 +38,15 @@ const DocumentViewer = ({ document, isOpen, onClose }) => {
         setDocumentContent(data)
       } else {
         setDocumentContent({
-          ...document,
+          ...doc,
           fullText: 'Failed to load document content.',
-          metadata: { pages: document.metadata?.pages || 1, wordCount: document.metadata?.wordCount || 0 }
+          metadata: { pages: doc.metadata?.pages || 1, wordCount: doc.metadata?.wordCount || 0 }
         })
       }
     } catch (error) {
       console.error('Error:', error)
       setDocumentContent({
-        ...document,
+        ...doc,
         fullText: 'Error loading document.',
         metadata: { pages: 1, wordCount: 0 }
       })
@@ -61,22 +67,22 @@ const DocumentViewer = ({ document, isOpen, onClose }) => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
   }
 
-  const isPDF = document?.mimeType === 'application/pdf' || document?.filename?.toLowerCase().endsWith('.pdf')
-  const totalPages = documentContent?.metadata?.pages || document?.metadata?.pages || 1
+  const isPDF = doc?.mimeType === 'application/pdf' || doc?.filename?.toLowerCase().endsWith('.pdf')
+  const totalPages = documentContent?.metadata?.pages || doc?.metadata?.pages || 1
 
   const handleDownload = () => {
-    if (document?.filename) {
-      const downloadUrl = `/uploads/${document.filename}`
+    if (doc?.filename) {
+      const downloadUrl = `/uploads/${doc.filename}`
       const link = document.createElement('a')
       link.href = downloadUrl
-      link.download = document.originalName
+      link.download = doc.originalName
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
     }
   }
 
-  // Handle escape key
+  // Handle escape key and click outside
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isOpen) {
@@ -87,11 +93,21 @@ const DocumentViewer = ({ document, isOpen, onClose }) => {
     // Only add event listener if document is available (client-side)
     if (typeof document !== 'undefined' && document) {
       document.addEventListener('keydown', handleKeyDown)
-      return () => document.removeEventListener('keydown', handleKeyDown)
+      return () => {
+        document.removeEventListener('keydown', handleKeyDown)
+      }
     }
   }, [isOpen, onClose])
 
-  if (!isOpen || !document) return null
+  // Handle backdrop click to close
+  const handleBackdropClick = (e) => {
+    // Only close if clicking directly on the backdrop, not on child elements
+    if (e.target === e.currentTarget) {
+      onClose()
+    }
+  }
+
+  if (!isOpen || !doc) return null
 
   return (
     <AnimatePresence>
@@ -100,36 +116,46 @@ const DocumentViewer = ({ document, isOpen, onClose }) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
-          onClick={onClose}
+          className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-1 sm:p-2"
+          onClick={handleBackdropClick}
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="bg-white dark:bg-gray-900 rounded-lg shadow-2xl w-full max-w-6xl h-[95vh] overflow-hidden flex flex-col"
+            className="bg-white dark:bg-gray-900 rounded-lg shadow-2xl w-full max-w-[98vw] h-[99vh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
             <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 flex-shrink-0">
               <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <h2 className="text-lg font-bold mb-1 truncate">{document.originalName}</h2>
-                  <div className="flex items-center space-x-3 text-blue-100 text-sm">
-                    <span className="flex items-center">
-                      <FileText className="w-3 h-3 mr-1" />
-                      {formatFileSize(document.size)}
-                    </span>
-                    <span className="flex items-center">
-                      <Calendar className="w-3 h-3 mr-1" />
-                      {formatDate(document.createdAt)}
-                    </span>
-                    {isPDF && (
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={onClose}
+                    className="p-2 hover:bg-white/20 rounded-lg transition-colors flex items-center space-x-2 text-white/90 hover:text-white"
+                    title="Back to documents"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span className="text-sm font-medium hidden sm:inline">Back</span>
+                  </button>
+                  <div className="flex-1">
+                    <h2 className="text-lg font-bold mb-1 truncate">{doc.originalName}</h2>
+                    <div className="flex items-center space-x-3 text-blue-100 text-sm">
                       <span className="flex items-center">
-                        <Eye className="w-3 h-3 mr-1" />
-                        PDF Document
+                        <FileText className="w-3 h-3 mr-1" />
+                        {formatFileSize(doc.size)}
                       </span>
-                    )}
+                      <span className="flex items-center">
+                        <Calendar className="w-3 h-3 mr-1" />
+                        {formatDate(doc.createdAt)}
+                      </span>
+                      {isPDF && (
+                        <span className="flex items-center">
+                          <Eye className="w-3 h-3 mr-1" />
+                          PDF Document
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -153,6 +179,18 @@ const DocumentViewer = ({ document, isOpen, onClose }) => {
 
             {/* Content */}
             <div className="flex-1 overflow-hidden relative">
+              {/* Close Hint Overlay */}
+              {showCloseHint && (
+                <motion.div
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className="absolute top-4 right-4 z-20 bg-black/80 text-white px-4 py-2 rounded-lg shadow-lg text-sm"
+                >
+                  Press <kbd className="bg-white/20 px-1.5 py-0.5 rounded">Esc</kbd> or click outside to close
+                </motion.div>
+              )}
+              
               {isLoading ? (
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center">
@@ -164,18 +202,30 @@ const DocumentViewer = ({ document, isOpen, onClose }) => {
                 <div className="h-full flex flex-col">
                   {isPDF ? (
                     /* PDF Viewer */
-                    <div className="flex-1 relative bg-gray-100 dark:bg-gray-800">
+                    <div className="flex-1 relative bg-gray-50 dark:bg-gray-800 min-h-0">
+                      {/* Floating Close Button for PDF viewer */}
+                      <div className="absolute top-4 left-4 z-10">
+                        <button
+                          onClick={onClose}
+                          className="bg-black/70 hover:bg-black/90 text-white p-3 rounded-full shadow-lg transition-all duration-200 flex items-center space-x-2"
+                          title="Close viewer (Esc)"
+                        >
+                          <ArrowLeft className="w-5 h-5" />
+                          <span className="text-sm font-medium hidden sm:inline">Close</span>
+                        </button>
+                      </div>
+                      
                       <object
-                        data={`/uploads/${document.filename}`}
+                        data={`/uploads/${doc.filename}`}
                         type="application/pdf"
                         className="w-full h-full border-0"
-                        title={document.originalName}
+                        title={doc.originalName}
                       >
                         <embed
-                          src={`/uploads/${document.filename}`}
+                          src={`/uploads/${doc.filename}`}
                           type="application/pdf"
                           className="w-full h-full border-0"
-                          title={document.originalName}
+                          title={doc.originalName}
                         />
                         <div className="flex flex-col items-center justify-center h-full p-8 text-center">
                           <FileText className="w-16 h-16 text-gray-400 mb-4" />
@@ -240,18 +290,27 @@ const DocumentViewer = ({ document, isOpen, onClose }) => {
             {/* Footer */}
             <div className="bg-gray-50 dark:bg-gray-800 px-4 py-3 border-t flex justify-between items-center flex-shrink-0">
               <div className="text-xs text-gray-500">
-                Document ID: {document._id?.slice(-8)}
+                Document ID: {doc._id?.slice(-8)}
               </div>
               <div className="flex items-center space-x-3">
                 <div className="text-xs text-gray-500">
-                  {documentContent?.metadata?.wordCount || document.metadata?.wordCount || 0} words
+                  {documentContent?.metadata?.wordCount || doc.metadata?.wordCount || 0} words
                 </div>
-                <button
-                  onClick={onClose}
-                  className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition-all text-sm"
-                >
-                  Close
-                </button>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={onClose}
+                    className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-all text-sm flex items-center space-x-2"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span>Back</span>
+                  </button>
+                  <button
+                    onClick={onClose}
+                    className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition-all text-sm"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             </div>
           </motion.div>
