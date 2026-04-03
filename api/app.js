@@ -95,7 +95,7 @@ app.get('/', (_req, res) => {
 });
 
 app.use((error, req, res, next) => {
-  console.error('❌ Server Error:', error);
+  console.error('Server Error:', error);
   res.status(500).json({
     error: 'Internal server error',
     message: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong',

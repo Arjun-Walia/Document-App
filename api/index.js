@@ -24,8 +24,8 @@ async function initializeServices() {
     try {
       await testGeminiConnection();
     } catch (error) {
-      console.log('⚠️ Gemini AI service unavailable during startup (continuing in degraded mode)');
-      console.log('📝 Reason:', error.message);
+      console.log('Gemini AI service unavailable during startup (continuing in degraded mode)');
+      console.log('Reason:', error.message);
     }
   })();
 
@@ -42,7 +42,7 @@ export default async function handler(req, res) {
     await initializeServices();
     return app(req, res);
   } catch (error) {
-    console.error('❌ Vercel handler initialization failed:', error.message);
+    console.error('Vercel handler initialization failed:', error.message);
     return res.status(500).json({
       error: 'Initialization failed',
       message: process.env.NODE_ENV === 'development' ? error.message : 'Server initialization error',
