@@ -16,6 +16,10 @@
   },
   "rewrites": [
     {
+      "source": "/api/(.*)",
+      "destination": "/api/index.js"
+    },
+    {
       "source": "/uploads/(.*)",
       "destination": "/api/uploads/$1"
     },
