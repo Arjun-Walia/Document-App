@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
-import app from './app.js';
-import { testGeminiConnection } from './services/gemini.js';
+import app from './_src/app.js';
+import { testGeminiConnection } from './_src/services/gemini.js';
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/document_app';
 
