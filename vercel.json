@@ -8,10 +8,7 @@
   },
   "functions": {
     "api/index.js": {
-      "maxDuration": 30
-    },
-    "api/[...all].js": {
-      "maxDuration": 30
+      "maxDuration": 10
     }
   },
   "rewrites": [
@@ -21,7 +18,7 @@
     },
     {
       "source": "/uploads/(.*)",
-      "destination": "/api/uploads/$1"
+      "destination": "/api/index.js"
     },
     {
       "source": "/(.*)",
